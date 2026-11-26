@@ -6,6 +6,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -14,16 +17,19 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK
+      - name: Install Android SDK components
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager --install "platforms;android-34" "build-tools;34.0.0"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)"
+          echo "sdkmanager: $SDKMANAGER"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0"
 
       - name: Unzip project
         run: |
           ZIP=$(find . -maxdepth 1 -name '*.zip' -print -quit)
+          echo "Using: $ZIP"
+          test -n "$ZIP"
           mkdir -p src
           unzip -q "$ZIP" -d src
 
