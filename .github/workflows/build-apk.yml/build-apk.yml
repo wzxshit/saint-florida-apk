@@ -1,0 +1,50 @@
+name: Build APK from ZIP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 34 platform and build tools
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager --install "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Unzip project
+        run: |
+          ZIP=$(find . -maxdepth 1 -name '*.zip' -print -quit)
+          echo "Using: $ZIP"
+          test -n "$ZIP"
+          mkdir -p src
+          unzip -q "$ZIP" -d src
+          test -f src/app/src/main/assets/index.html
+          test -f src/app/src/main/java/com/dsh/saintflorida/MainActivity.java
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Build debug APK
+        run: gradle -p src assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SaintFlorida-apk
+          path: src/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
